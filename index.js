@@ -3,6 +3,7 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./src/config/db');
 const authRoutes = require('./src/modules/auth/auth.routes');
+const errorHandler = require('./src/middlewares/errorHandler');
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/auth', authRoutes);
+app.use(errorHandler);
 
 connectDB();
 
