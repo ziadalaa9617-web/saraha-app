@@ -24,10 +24,13 @@ const resetPasswordSchema = z.object({
   newPassword: z.string().min(6),
 });
 
+const googleLoginSchema = z.object({ idToken: z.string().min(1) });
+
 module.exports = {
   registerSchema,
   verifyEmailSchema,
   resendOtpSchema,
   loginSchema,
   resetPasswordSchema,
+  googleLoginSchema,
 };

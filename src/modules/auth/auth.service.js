@@ -1,9 +1,9 @@
-const AppError = require('../../utils/AppError');
+const AppError = require('../../pkg/AppError');
 
 const OTP_TTL = 10 * 60 * 1000;
 const OTP_TYPES = ['verify-email', 'reset-password'];
 
-const createAuthService = ({ userRepo, otpRepo, hasher, tokens, mailer, generateOtp }) => {
+const createAuthService = ({ userRepo, otpRepo, hasher, tokens, mailer, generateOtp, googleVerify }) => {
   const issueOtp = async (user, type) => {
     await otpRepo.deleteByUserAndType(user._id, type);
     const code = generateOtp();
@@ -69,7 +69,29 @@ const createAuthService = ({ userRepo, otpRepo, hasher, tokens, mailer, generate
     await otpRepo.deleteById(otp._id);
   };
 
-  return { register, verifyEmail, resendOtp, login, resetPassword };
+  const loginWithGoogle = async ({ idToken }) => {
+    let info;
+    try {
+      info = await googleVerify(idToken);
+    } catch {
+      throw new AppError('invalid google token', 401);
+    }
+    if (!info.emailVerified) throw new AppError('google email not verified', 401);
+
+    let user = await userRepo.findByEmail(info.email);
+    if (user?.isDeleted) throw new AppError('account is deleted', 403);
+    if (!user) {
+      user = await userRepo.create({
+        name: info.name.slice(0, 20),
+        email: info.email,
+        provider: 'google',
+        isVerified: true,
+      });
+    }
+    return tokens.sign({ id: user._id });
+  };
+
+  return { register, verifyEmail, resendOtp, login, resetPassword, loginWithGoogle };
 };
 
 module.exports = createAuthService;

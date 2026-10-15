@@ -1,4 +1,4 @@
-const AppError = require('../utils/AppError');
+const AppError = require('../pkg/AppError');
 
 const validate = (schema) => (req, res, next) => {
   const result = schema.safeParse(req.body);

@@ -1,13 +1,31 @@
 const createAuthService = require('./auth.service');
 const userRepo = require('../user/user.repository');
 const otpRepo = require('../otp/otp.repository');
-const hasher = require('../../utils/hash');
-const tokens = require('../../utils/token');
-const mailer = require('../../utils/sendEmail');
-const generateOtp = require('../../utils/generateOtp');
-const asyncHandler = require('../../utils/asyncHandler');
+const config = require('../../config');
+const hasher = require('../../pkg/hash');
+const tokens = require('../../pkg/token');
+const mailer = require('../../lib/sendEmail');
+const generateOtp = require('../../lib/generateOtp');
+const googleVerify = require('../../lib/googleVerify');
+const asyncHandler = require('../../pkg/asyncHandler');
 
-const authService = createAuthService({ userRepo, otpRepo, hasher, tokens, mailer, generateOtp });
+const authService = createAuthService({
+  userRepo,
+  otpRepo,
+  hasher,
+  tokens,
+  mailer,
+  generateOtp,
+  googleVerify,
+});
+
+const setTokenCookie = (res, token) =>
+  res.cookie('token', token, {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: config.isProd,
+    maxAge: 24 * 60 * 60 * 1000,
+  });
 
 const register = asyncHandler(async (req, res) => {
   const data = await authService.register(req.body);
@@ -26,12 +44,7 @@ const resendOtp = asyncHandler(async (req, res) => {
 
 const login = asyncHandler(async (req, res) => {
   const token = await authService.login(req.body);
-  res.cookie('token', token, {
-    httpOnly: true,
-    sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000,
-  });
+  setTokenCookie(res, token);
   res.json({ message: 'logged in' });
 });
 
@@ -40,4 +53,10 @@ const resetPassword = asyncHandler(async (req, res) => {
   res.json({ message: 'password updated' });
 });
 
-module.exports = { register, verifyEmail, resendOtp, login, resetPassword };
+const loginWithGoogle = asyncHandler(async (req, res) => {
+  const token = await authService.loginWithGoogle(req.body);
+  setTokenCookie(res, token);
+  res.json({ message: 'logged in' });
+});
+
+module.exports = { register, verifyEmail, resendOtp, login, resetPassword, loginWithGoogle };
