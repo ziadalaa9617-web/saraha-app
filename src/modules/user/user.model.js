@@ -13,7 +13,10 @@ const userSchema = new Schema(
     provider: { type: String, enum: ['google', 'facebook', 'local'], default: 'local' },
     isDeleted: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
+    twoStepEnabled: { type: Boolean, default: false },
     dob: Date,
+    failedAttempts: { type: Number, default: 0 },
+lockUntil: Date,
     gender: { type: String, enum: ['Male', 'Female'] },
   },
   { timestamps: true }

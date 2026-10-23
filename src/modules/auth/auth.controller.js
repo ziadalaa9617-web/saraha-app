@@ -43,11 +43,27 @@ const resendOtp = asyncHandler(async (req, res) => {
 });
 
 const login = asyncHandler(async (req, res) => {
-  const token = await authService.login(req.body);
+  const result = await authService.login(req.body);
+  if (result.twoStep) return res.json({ message: 'OTP sent, confirm your login' });
+  setTokenCookie(res, result.token);
+  res.json({ message: 'logged in' });
+});
+
+const confirmLogin = asyncHandler(async (req, res) => {
+  const token = await authService.confirmLogin(req.body);
   setTokenCookie(res, token);
   res.json({ message: 'logged in' });
 });
 
+const enableTwoStep = asyncHandler(async (req, res) => {
+  await authService.enableTwoStep(req.user);
+  res.json({ message: 'OTP sent' });
+});
+
+const confirmTwoStep = asyncHandler(async (req, res) => {
+  await authService.confirmTwoStep(req.user, req.body);
+  res.json({ message: '2-step verification enabled' });
+});
 const resetPassword = asyncHandler(async (req, res) => {
   await authService.resetPassword(req.body);
   res.json({ message: 'password updated' });
@@ -59,4 +75,4 @@ const loginWithGoogle = asyncHandler(async (req, res) => {
   res.json({ message: 'logged in' });
 });
 
-module.exports = { register, verifyEmail, resendOtp, login, resetPassword, loginWithGoogle };
+module.exports = { register, verifyEmail, resendOtp, login, resetPassword, loginWithGoogle,confirmLogin,enableTwoStep,confirmTwoStep };

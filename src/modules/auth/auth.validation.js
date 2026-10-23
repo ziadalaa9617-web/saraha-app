@@ -11,7 +11,7 @@ const registerSchema = z.object({
   dob: z.coerce.date().optional(),
   gender: z.enum(['Male', 'Female']).optional(),
 });
-
+const codeSchema = z.object({ code });
 const verifyEmailSchema = z.object({ email, code });
 
 const resendOtpSchema = z.object({ email, type });
@@ -33,4 +33,5 @@ module.exports = {
   loginSchema,
   resetPasswordSchema,
   googleLoginSchema,
+  codeSchema,
 };

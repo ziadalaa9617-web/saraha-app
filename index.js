@@ -5,6 +5,9 @@ const connectDB = require('./src/config/db');
 const authRoutes = require('./src/modules/auth/auth.routes');
 const errorHandler = require('./src/middlewares/errorHandler');
 const { correlationId } = require('./src/middlewares/correlationId');
+const messageRoutes = require('./src/modules/message/message.routes');
+const requestRoutes = require('./src/modules/request/request.routes');
+const conversationRoutes = require('./src/modules/conversation/conversation.routes');
 const app = express();
 app.use(correlationId);
 app.use(express.json());
@@ -15,8 +18,10 @@ app.get('/', (req, res) => {
 });
 
 app.use('/auth', authRoutes);
+app.use('/messages', messageRoutes);
+app.use('/requests', requestRoutes);
+app.use('/conversations', conversationRoutes);
 app.use(errorHandler);
-
 connectDB();
 
 app.listen(config.port, () => {

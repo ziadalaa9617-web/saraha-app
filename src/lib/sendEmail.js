@@ -23,6 +23,8 @@ const sendEmail = async ({ to, subject, html }) => {
 const subjects = {
   'verify-email': 'Verify your email',
   'reset-password': 'Reset your password',
+  'enable-2sv': 'Enable 2-step verification',
+'login-2sv': 'Login verification code',
 };
 
 const sendOtpEmail = (to, code, type) =>

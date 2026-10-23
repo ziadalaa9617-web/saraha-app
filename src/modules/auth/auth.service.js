@@ -2,6 +2,8 @@ const AppError = require('../../pkg/AppError');
 
 const OTP_TTL = 10 * 60 * 1000;
 const OTP_TYPES = ['verify-email', 'reset-password'];
+const MAX_ATTEMPTS = 5;
+const LOCK_TIME = 5 * 60 * 1000;
 
 const createAuthService = ({ userRepo, otpRepo, hasher, tokens, mailer, generateOtp, googleVerify }) => {
   const issueOtp = async (user, type) => {
@@ -54,11 +56,32 @@ const createAuthService = ({ userRepo, otpRepo, hasher, tokens, mailer, generate
 
   const login = async ({ email, password }) => {
     const user = await userRepo.findByEmail(email);
-    const match =
-      user && !user.isDeleted && user.password && (await hasher.compare(password, user.password));
-    if (!match) throw new AppError('invalid email or password', 401);
+    if (!user || user.isDeleted || !user.password) throw new AppError('invalid email or password', 401);
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      throw new AppError('account temporarily banned, try again later', 429);
+    }
+
+    if (!(await hasher.compare(password, user.password))) {
+      const attempts = user.failedAttempts + 1;
+      await userRepo.updateById(
+        user._id,
+        attempts >= MAX_ATTEMPTS
+          ? { failedAttempts: 0, lockUntil: new Date(Date.now() + LOCK_TIME) }
+          : { failedAttempts: attempts }
+      );
+      throw new AppError('invalid email or password', 401);
+    }
+
     if (!user.isVerified) throw new AppError('verify your email first', 403);
-    return tokens.sign({ id: user._id });
+    if (user.failedAttempts || user.lockUntil) {
+      await userRepo.updateById(user._id, { failedAttempts: 0, lockUntil: null });
+    }
+
+    if (user.twoStepEnabled) {
+      await issueOtp(user, 'login-2sv');
+      return { twoStep: true };
+    }
+    return { token: tokens.sign({ id: user._id }) };
   };
 
   const resetPassword = async ({ email, code, newPassword }) => {
@@ -91,7 +114,36 @@ const createAuthService = ({ userRepo, otpRepo, hasher, tokens, mailer, generate
     return tokens.sign({ id: user._id });
   };
 
-  return { register, verifyEmail, resendOtp, login, resetPassword, loginWithGoogle };
+  const enableTwoStep = async (user) => {
+    if (user.twoStepEnabled) throw new AppError('already enabled', 400);
+    await issueOtp(user, 'enable-2sv');
+  };
+
+  const confirmTwoStep = async (user, { code }) => {
+    const otp = await checkOtp(user._id, code, 'enable-2sv');
+    await userRepo.updateById(user._id, { twoStepEnabled: true });
+    await otpRepo.deleteById(otp._id);
+  };
+
+  const confirmLogin = async ({ email, code }) => {
+    const user = await userRepo.findByEmail(email);
+    if (!user || user.isDeleted) throw new AppError('invalid or expired OTP', 400);
+    const otp = await checkOtp(user._id, code, 'login-2sv');
+    await otpRepo.deleteById(otp._id);
+    return tokens.sign({ id: user._id });
+  };
+
+  return {
+    register,
+    verifyEmail,
+    resendOtp,
+    login,
+    resetPassword,
+    loginWithGoogle,
+    enableTwoStep,
+    confirmTwoStep,
+    confirmLogin,
+  };
 };
 
 module.exports = createAuthService;
