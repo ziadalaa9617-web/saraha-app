@@ -8,6 +8,7 @@ const mailer = require('../../lib/sendEmail');
 const generateOtp = require('../../lib/generateOtp');
 const googleVerify = require('../../lib/googleVerify');
 const asyncHandler = require('../../pkg/asyncHandler');
+const cache = require('../../pkg/cache');
 
 const authService = createAuthService({
   userRepo,
@@ -17,6 +18,7 @@ const authService = createAuthService({
   mailer,
   generateOtp,
   googleVerify,
+  cache,
 });
 
 const setTokenCookie = (res, token) =>

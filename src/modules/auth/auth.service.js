@@ -5,7 +5,8 @@ const OTP_TYPES = ['verify-email', 'reset-password'];
 const MAX_ATTEMPTS = 5;
 const LOCK_TIME = 5 * 60 * 1000;
 
-const createAuthService = ({ userRepo, otpRepo, hasher, tokens, mailer, generateOtp, googleVerify }) => {
+
+const createAuthService = ({ userRepo, otpRepo, hasher, tokens, mailer, generateOtp, googleVerify, cache }) => {
   const issueOtp = async (user, type) => {
     await otpRepo.deleteByUserAndType(user._id, type);
     const code = generateOtp();
@@ -55,34 +56,33 @@ const createAuthService = ({ userRepo, otpRepo, hasher, tokens, mailer, generate
   };
 
   const login = async ({ email, password }) => {
-    const user = await userRepo.findByEmail(email);
-    if (!user || user.isDeleted || !user.password) throw new AppError('invalid email or password', 401);
-    if (user.lockUntil && user.lockUntil > new Date()) {
-      throw new AppError('account temporarily banned, try again later', 429);
-    }
+  if (cache.get(`lock:${email}`)) {
+    throw new AppError('account temporarily banned, try again later', 429);
+  }
 
-    if (!(await hasher.compare(password, user.password))) {
-      const attempts = user.failedAttempts + 1;
-      await userRepo.updateById(
-        user._id,
-        attempts >= MAX_ATTEMPTS
-          ? { failedAttempts: 0, lockUntil: new Date(Date.now() + LOCK_TIME) }
-          : { failedAttempts: attempts }
-      );
-      throw new AppError('invalid email or password', 401);
-    }
+  const user = await userRepo.findByEmail(email);
+  if (!user || user.isDeleted || !user.password) throw new AppError('invalid email or password', 401);
 
-    if (!user.isVerified) throw new AppError('verify your email first', 403);
-    if (user.failedAttempts || user.lockUntil) {
-      await userRepo.updateById(user._id, { failedAttempts: 0, lockUntil: null });
+  if (!(await hasher.compare(password, user.password))) {
+    const attempts = (cache.get(`fail:${email}`) || 0) + 1;
+    if (attempts >= MAX_ATTEMPTS) {
+      cache.set(`lock:${email}`, true, LOCK_TIME);
+      cache.del(`fail:${email}`);
+    } else {
+      cache.set(`fail:${email}`, attempts, LOCK_TIME);
     }
+    throw new AppError('invalid email or password', 401);
+  }
 
-    if (user.twoStepEnabled) {
-      await issueOtp(user, 'login-2sv');
-      return { twoStep: true };
-    }
-    return { token: tokens.sign({ id: user._id }) };
-  };
+  if (!user.isVerified) throw new AppError('verify your email first', 403);
+  cache.del(`fail:${email}`);
+
+  if (user.twoStepEnabled) {
+    await issueOtp(user, 'login-2sv');
+    return { twoStep: true };
+  }
+  return { token: tokens.sign({ id: user._id }) };
+};
 
   const resetPassword = async ({ email, code, newPassword }) => {
     const user = await userRepo.findByEmail(email);
