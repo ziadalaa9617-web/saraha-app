@@ -1,9 +1,5 @@
-const createMessageService = require('./message.service');
-const messageRepo = require('./message.repository');
-const userRepo = require('../user/user.repository');
+const { messageService } = require('../../factory');
 const asyncHandler = require('../../pkg/asyncHandler');
-
-const messageService = createMessageService({ messageRepo, userRepo });
 
 const send = asyncHandler(async (req, res) => {
   const data = await messageService.send(req.user, req.body);

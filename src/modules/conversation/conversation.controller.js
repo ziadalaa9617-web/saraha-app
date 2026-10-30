@@ -1,8 +1,5 @@
-const createConversationService = require('./conversation.service');
-const conversationRepo = require('./conversation.repository');
+const { conversationService: service } = require('../../factory');
 const asyncHandler = require('../../pkg/asyncHandler');
-
-const service = createConversationService({ conversationRepo });
 
 const list = asyncHandler(async (req, res) => {
   res.json({ data: await service.list(req.user) });

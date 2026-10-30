@@ -1,25 +1,7 @@
-const createAuthService = require('./auth.service');
-const userRepo = require('../user/user.repository');
-const otpRepo = require('../otp/otp.repository');
-const config = require('../../config');
-const hasher = require('../../pkg/hash');
-const tokens = require('../../pkg/token');
-const mailer = require('../../lib/sendEmail');
-const generateOtp = require('../../lib/generateOtp');
-const googleVerify = require('../../lib/googleVerify');
-const asyncHandler = require('../../pkg/asyncHandler');
-const cache = require('../../pkg/cache');
 
-const authService = createAuthService({
-  userRepo,
-  otpRepo,
-  hasher,
-  tokens,
-  mailer,
-  generateOtp,
-  googleVerify,
-  cache,
-});
+const { authService } = require('../../factory');
+const config = require('../../config');
+const asyncHandler = require('../../pkg/asyncHandler');
 
 const setTokenCookie = (res, token) =>
   res.cookie('token', token, {

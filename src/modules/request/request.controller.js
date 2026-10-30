@@ -1,10 +1,5 @@
-const createRequestService = require('./request.service');
-const requestRepo = require('./request.repository');
-const messageRepo = require('../message/message.repository');
-const conversationRepo = require('../conversation/conversation.repository');
+const { requestService } = require('../../factory');
 const asyncHandler = require('../../pkg/asyncHandler');
-
-const requestService = createRequestService({ requestRepo, messageRepo, conversationRepo });
 
 const create = asyncHandler(async (req, res) => {
   const data = await requestService.create(req.user, req.body);
