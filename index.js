@@ -8,6 +8,7 @@ const { correlationId } = require('./src/middlewares/correlationId');
 const messageRoutes = require('./src/modules/message/message.routes');
 const requestRoutes = require('./src/modules/request/request.routes');
 const conversationRoutes = require('./src/modules/conversation/conversation.routes');
+const userRoutes = require('./src/modules/user/user.routes');
 const app = express();
 app.use(correlationId);
 app.use(express.json());
@@ -16,7 +17,8 @@ app.use(cookieParser());
 app.get('/', (req, res) => {
   res.send('server is running');
 });
-
+app.use('/uploads', express.static('uploads'));
+app.use('/users', userRoutes);
 app.use('/auth', authRoutes);
 app.use('/messages', messageRoutes);
 app.use('/requests', requestRoutes);
