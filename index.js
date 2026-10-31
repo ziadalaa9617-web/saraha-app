@@ -15,7 +15,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.get('/', (req, res) => {
-  res.send('server is running');
+  res.send(`server is running, pid ${process.pid}`);
 });
 app.use('/uploads', express.static('uploads'));
 app.use('/users', userRoutes);
